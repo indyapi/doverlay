@@ -1,4 +1,4 @@
-import { Timestamp } from "firebase/database";
+import { serverTimestamp  } from "firebase/database";
 
 // ---- Donation ----
 export type PaymentMethod = "promptpay" | "bank";

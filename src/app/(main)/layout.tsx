@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, Syne } from "next/font/google";
-import "./globals.css";
+import "../globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 
 const spacegrotesk = Space_Grotesk({

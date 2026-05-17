@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, Syne } from "next/font/google";
-import "../globals.css";
+import "../../globals.css";
 
 const spacegrotesk = Space_Grotesk({ subsets: ["latin"], variable: "--font-sans" });
 const syne = Syne({ subsets: ["latin"], variable: "--font-display" });

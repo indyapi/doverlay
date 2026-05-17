@@ -1,94 +1,95 @@
-# 🎬 Doverlay
+# Doverlay 🚀
 
-ระบบรับ Donation สำหรับ Streamer พร้อม Overlay Real-time สำหรับ OBS
+**Doverlay** is a modern, high-performance donation overlay system for streamers. Built with Next.js 15, it features real-time donation alerts, top donator leaderboards, and an automated slip verification system using OCR (Optical Character Recognition).
+
+---
+
+## ✨ Features
+
+- 🎨 **Sleek Overlay Design:** Beautifully designed alerts and leaderboards ready for OBS/Streamlabs.
+- 🔍 **Auto-Slip Verification:** Uses Tesseract.js OCR to read and verify transfer slips (supports Thai banks).
+- ⚡ **Real-time Updates:** Powered by Firebase Realtime Database for instant alert triggers.
+- 🛠️ **Admin Dashboard:** Manage donations, confirm payments, and configure your payment methods easily.
+- 🎤 **Text-to-Speech (TTS):** Automatic narration of donation messages.
+- 📱 **Responsive UI:** Clean and modern interface built with Tailwind CSS and Framer Motion.
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Next.js 14** + TypeScript
-- **Tailwind CSS** + shadcn/ui
-- **Firebase** (Realtime Database, Auth)
-- **ImgBB API** — สำหรับอัพโหลดรูปภาพ
-- **Tesseract.js** — OCR อ่านสลิปธนาคาร
-- **Framer Motion** — Animation
-- **Web Speech API** — TTS อ่านข้อความฝาก
+- **Framework:** [Next.js 15+](https://nextjs.org/) (App Router)
+- **Styling:** [Tailwind CSS](https://tailwindcss.com/), [Lucide React](https://lucide.dev/)
+- **Animations:** [Framer Motion](https://www.framer.com/motion/)
+- **Backend/Database:** [Firebase](https://firebase.google.com/) (Realtime Database & Auth)
+- **OCR:** [Tesseract.js](https://tesseract.projectnaptha.com/)
+- **Image Hosting:** [ImgBB API](https://api.imgbb.com/)
+- **Deployment:** [Netlify](https://www.netlify.com/)
 
 ---
 
-## 🚀 วิธี Setup
+## 📁 Project Structure
 
-### 1. Clone และติดตั้ง dependencies
+```text
+src/
+├── app/
+│   ├── (main)/       # Main website & Admin panel (Home, Login, Dashboard)
+│   └── (overlay)/    # Streaming overlays (Alerts, Leaderboards)
+├── components/       # Reusable UI components
+├── contexts/         # React Contexts (Auth, etc.)
+├── lib/              # Utility functions (Firebase, OCR, TTS)
+└── types/            # TypeScript definitions
+```
+
+---
+
+## 🚀 Getting Started
+
+### 1. Clone the repository
 ```bash
-git clone https://github.com/yourusername/doverlay.git
-cd doverlay
+git clone <your-repo-url>
+cd Doverlay
+```
+
+### 2. Install dependencies
+```bash
 npm install
 ```
 
-### 2. ตั้งค่า Firebase
-1. ไปที่ [Firebase Console](https://console.firebase.google.com)
-2. สร้าง Project ใหม่
-3. เปิดใช้งาน **Realtime Database**, **Authentication (Email/Password)**
-4. ไปที่ Project Settings > Your Apps > เพิ่ม Web App
-5. คัดลอก config มาใส่ `.env.local`
-
-### 3. ตั้งค่า Environment Variables
-```bash
-cp .env.local.example .env.local
-# แก้ไขค่าต่างๆ ใน .env.local
+### 3. Environment Variables
+Create a `.env.local` file in the root and add your credentials:
+```env
+NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_auth_domain
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+NEXT_PUBLIC_FIREBASE_DATABASE_URL=your_database_url
+NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+NEXT_PUBLIC_IMGBB_API_KEY=your_imgbb_api_key
 ```
 
-### 4. สร้าง Admin Account
-1. ไปที่ Firebase Console > Authentication > Users
-2. Add User > ใส่ email และ password ที่ต้องการ
-
-### 5. รัน Development Server
+### 4. Run Development Server
 ```bash
 npm run dev
 ```
-
-เปิด [http://localhost:3000](http://localhost:3000)
-
----
-
-## 📁 โครงสร้างโปรเจค
-
-```
-src/
-  app/
-    page.tsx                  → หน้า Donation (Public)
-    admin/page.tsx            → Admin Panel (3 tabs)
-    overlay/
-      alert/page.tsx          → OBS: แจ้งเตือน donation
-      topdonate/page.tsx      → OBS: Top 10 Donators
-  lib/
-    firebase.ts               → Firebase config
-    firestore.ts              → Realtime Database service functions
-    ocr.ts                    → Tesseract.js OCR
-    tts.ts                    → Web Speech API
-    utils.ts                  → Utility functions
-  types/
-    index.ts                  → TypeScript types
-  contexts/
-    AuthContext.tsx            → Firebase Auth context
-```
+Open [http://localhost:3000](http://localhost:3000) to see the result.
 
 ---
 
-## 🎮 วิธีใช้งาน
+## 📦 Deployment
 
-### OBS Browser Source
-1. เปิด Admin > Tab Overlay
-2. คัดลอกลิงค์ Overlay
-3. ใน OBS เพิ่ม Browser Source > วาง URL
-4. ตั้งขนาดตามต้องการ
+### Netlify
+This project is optimized for Netlify. Simply connect your repository and set the environment variables in the Netlify Dashboard.
 
-### URL Overlays
-- Alert: `https://yoursite.vercel.app/overlay/alert`
-- Top Donate: `https://yoursite.vercel.app/overlay/topdonate`
+- **Build Command:** `npm run build`
+- **Publish Directory:** `.next`
+
+---
+
+## 🤝 Contributing
+
+Feel free to open issues or submit pull requests to improve the project!
 
 ---
 
 ## 📝 License
 
-MIT
+Private / Internal Use.

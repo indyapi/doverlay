@@ -2,14 +2,17 @@ import { serverTimestamp  } from "firebase/database";
 
 // ---- Donation ----
 export type PaymentMethod = "promptpay" | "bank";
-export type DonationStatus = "pending" | "confirmed" | "rejected";
+export type DonationStatus = "pending" | "auto_approved" | "manual_approved" | "rejected" | "completed";
 
 export interface OcrResult {
-  extractedAmount: number | null;
-  extractedReceiver: string | null;
-  extractedDate: string | null;
+  success: boolean;
+  isSlip: boolean;
+  accountNameMatch: boolean;
+  amountMatch: boolean;
+  extractedText: string;
   confidence: number;
-  rawText: string;
+  extractedAmount?: number | null;
+  extractedReceiver?: string | null;
 }
 
 export interface Donation {
@@ -20,7 +23,11 @@ export interface Donation {
   paymentMethod: PaymentMethod;
   slipUrl: string;
   status: DonationStatus;
-  ocr: OcrResult | null;
+  ocrResult: OcrResult | null;
+  isAutoApproved: boolean;
+  queueOrder: number | null;
+  reviewedBy: string | null;
+  reviewedAt: number | null;
   createdAt: number; // Unix timestamp ms
 }
 
@@ -46,6 +53,14 @@ export interface PaymentSettings {
   methods: PaymentMethod[];
   promptpayQR: string | null;
   bank: BankInfo | null;
+}
+
+export interface TtsSettings {
+  enabled: boolean;
+  voiceURI: string | null;
+  rate: number;
+  pitch: number;
+  volume: number;
 }
 
 // ---- Top Donate ----

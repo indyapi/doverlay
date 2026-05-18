@@ -24,6 +24,14 @@ const DATE_PATTERNS = [
   /(\d{1,2}\s+[ก-ฮ]+\s+\d{4})/,
 ];
 
+// Keywords ที่มักพบในสลิปธนาคาร
+const SLIP_KEYWORDS = [
+  "รายการสำเร็จ", "โอนเงินสำเร็จ", "บันทึกช่วยจำ", "จำนวนเงิน",
+  "ผู้โอน", "ผู้รับเงิน", "วัน-เวลาที่ทำรายการ", "รหัสอ้างอิง",
+  "Transaction Successful", "Transfer Successful", "Successfully",
+  "Ref. No", "Reference No", "Date/Time", "Amount",
+];
+
 function extractAmount(text: string): number | null {
   for (const pattern of AMOUNT_PATTERNS) {
     const match = text.match(pattern);
@@ -62,18 +70,22 @@ function extractReceiver(text: string): string | null {
 function calculateConfidence(
   extractedAmount: number | null,
   expectedAmount: number,
-  rawText: string
+  rawText: string,
+  isSlip: boolean
 ): number {
   let score = 0;
 
-  // ถ้าอ่านออกมาได้จำนวนเงิน +40 คะแนน
-  if (extractedAmount !== null) score += 40;
+  // ถ้าดูเหมือนเป็นสลิป +30 คะแนน
+  if (isSlip) score += 30;
 
-  // ถ้าจำนวนตรงกับที่ user กรอก +40 คะแนน
-  if (extractedAmount !== null && Math.abs(extractedAmount - expectedAmount) < 1) score += 40;
+  // ถ้าอ่านออกมาได้จำนวนเงิน +30 คะแนน
+  if (extractedAmount !== null) score += 30;
 
-  // ถ้าข้อความยาวพอ (สลิปจริงมีข้อมูลเยอะ) +20 คะแนน
-  if (rawText.length > 100) score += 20;
+  // ถ้าจำนวนตรงกับที่ user กรอก +30 คะแนน
+  if (extractedAmount !== null && Math.abs(extractedAmount - expectedAmount) < 1) score += 30;
+
+  // ถ้าข้อความยาวพอ (สลิปจริงมีข้อมูลเยอะ) +10 คะแนน
+  if (rawText.length > 100) score += 10;
 
   return score;
 }
@@ -90,25 +102,39 @@ export async function extractSlipData(
 
     const rawText = data.text;
     const extractedAmount = extractAmount(rawText);
-    const extractedDate = extractDate(rawText);
     const extractedReceiver = extractReceiver(rawText);
-    const confidence = calculateConfidence(extractedAmount, expectedAmount, rawText);
+    
+    // ตรวจสอบว่าเป็นสลิปหรือไม่จาก Keyword หรือ Bank Name
+    const hasSlipKeyword = SLIP_KEYWORDS.some(kw => rawText.toLowerCase().includes(kw.toLowerCase()));
+    const hasBankName = THAI_BANKS.some(bank => rawText.toUpperCase().includes(bank.toUpperCase()));
+    const isSlip = hasSlipKeyword || hasBankName;
+
+    const amountMatch = extractedAmount !== null && Math.abs(extractedAmount - expectedAmount) < 0.1;
+    const accountNameMatch = !!(expectedReceiver && extractedReceiver && 
+      (extractedReceiver.toLowerCase().includes(expectedReceiver.toLowerCase()) || 
+       expectedReceiver.toLowerCase().includes(extractedReceiver.toLowerCase())));
+
+    const confidence = calculateConfidence(extractedAmount, expectedAmount, rawText, isSlip);
 
     return {
+      success: true,
+      isSlip,
+      accountNameMatch,
+      amountMatch,
+      extractedText: rawText,
+      confidence,
       extractedAmount,
       extractedReceiver,
-      extractedDate,
-      confidence,
-      rawText,
     };
   } catch (error) {
     console.error("OCR Error:", error);
     return {
-      extractedAmount: null,
-      extractedReceiver: null,
-      extractedDate: null,
+      success: false,
+      isSlip: false,
+      accountNameMatch: false,
+      amountMatch: false,
+      extractedText: "",
       confidence: 0,
-      rawText: "",
     };
   }
 }
@@ -118,4 +144,9 @@ export const OCR_CONFIDENCE_THRESHOLD = 80;
 
 export function isOcrConfident(result: OcrResult): boolean {
   return result.confidence >= OCR_CONFIDENCE_THRESHOLD;
+}
+
+export function validateSlipWithOCR(result: OcrResult): boolean {
+  // เกณฑ์การ Auto Approved: สำเร็จ + เป็นสลิป + จำนวนเงินตรง + ชื่อบัญชีตรง
+  return result.success && result.isSlip && result.amountMatch && result.accountNameMatch;
 }

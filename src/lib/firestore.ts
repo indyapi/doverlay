@@ -1,9 +1,9 @@
 import {
   ref, set, push, update, onValue, query,
-  orderByChild, equalTo, get, serverTimestamp,
+  orderByChild, equalTo, get, serverTimestamp, remove,
 } from "firebase/database";
 import { db } from "@/lib/firebase";
-import type { Donation, OverlayQueueItem, PaymentSettings, TopDonator } from "@/types";
+import type { Donation, OverlayQueueItem, PaymentSettings, TopDonator, TtsSettings } from "@/types";
 
 // ---- ImgBB Upload ----
 export async function uploadImage(file: File): Promise<string> {
@@ -33,14 +33,18 @@ export async function uploadImage(file: File): Promise<string> {
 
 // ---- Donations ----
 export async function createDonation(
-  data: Omit<Donation, "id" | "createdAt" | "status" | "ocr">
+  data: Omit<Donation, "id" | "createdAt" | "status" | "ocrResult" | "isAutoApproved" | "queueOrder" | "reviewedBy" | "reviewedAt">
 ): Promise<string> {
   const donationsRef = ref(db, "donations");
   const newRef = push(donationsRef);
   await set(newRef, {
     ...data,
     status: "pending",
-    ocr: null,
+    ocrResult: null,
+    isAutoApproved: false,
+    queueOrder: null,
+    reviewedBy: null,
+    reviewedAt: null,
     createdAt: Date.now(),
   });
   return newRef.key!;
@@ -49,15 +53,20 @@ export async function createDonation(
 export async function updateDonationStatus(
   id: string,
   status: Donation["status"],
-  ocr?: Donation["ocr"]
+  ocrResult?: Donation["ocrResult"]
 ) {
   const updates: Record<string, unknown> = { status };
-  if (ocr) updates.ocr = ocr;
+  if (ocrResult) updates.ocrResult = ocrResult;
   await update(ref(db, `donations/${id}`), updates);
 }
 
-export async function confirmDonation(id: string) {
-  await update(ref(db, `donations/${id}`), { status: "confirmed" });
+export async function approveDonation(id: string, isAuto: boolean = false) {
+  const status = isAuto ? "auto_approved" : "manual_approved";
+  await update(ref(db, `donations/${id}`), { 
+    status, 
+    isAutoApproved: isAuto,
+    reviewedAt: Date.now()
+  });
 
   const snap = await get(ref(db, `donations/${id}`));
   if (snap.exists()) {
@@ -74,12 +83,19 @@ export async function confirmDonation(id: string) {
   }
 }
 
+export async function confirmDonation(id: string) {
+  return approveDonation(id, false);
+}
+
 export function listenDonations(callback: (donations: Donation[]) => void) {
   const q = query(ref(db, "donations"), orderByChild("createdAt"));
   return onValue(q, (snap) => {
     const result: Donation[] = [];
     snap.forEach((child) => {
-      result.unshift({ id: child.key!, ...child.val() });
+      const val = child.val();
+      // Migration for old status
+      if (val.status === "confirmed") val.status = "manual_approved";
+      result.unshift({ id: child.key!, ...val });
     });
     callback(result);
   });
@@ -102,14 +118,20 @@ export async function markQueueItemPlayed(id: string) {
   await update(ref(db, `overlayQueue/${id}`), { played: true });
 }
 
+export async function removeFromQueue(id: string) {
+  await remove(ref(db, `overlayQueue/${id}`));
+}
+
 // ---- Top Donate ----
 export function listenTopDonators(callback: (top: TopDonator[]) => void) {
-  const q = query(ref(db, "donations"), orderByChild("status"), equalTo("confirmed"));
+  const q = ref(db, "donations");
   return onValue(q, (snap) => {
     const map: Record<string, number> = {};
     snap.forEach((child) => {
       const d = child.val() as Omit<Donation, "id">;
-      map[d.name] = (map[d.name] || 0) + d.amount;
+      if (d.status === "auto_approved" || d.status === "manual_approved" || d.status === "completed" || d.status === ("confirmed" as any)) {
+        map[d.name] = (map[d.name] || 0) + d.amount;
+      }
     });
     const top = Object.entries(map)
       .map(([name, totalAmount]) => ({ name, totalAmount }))
@@ -133,6 +155,32 @@ export async function getPaymentSettings(): Promise<PaymentSettings | null> {
 
 export async function savePaymentSettings(settings: PaymentSettings) {
   await set(ref(db, "settings/payment"), settings);
+}
+
+export function listenTtsSettings(callback: (s: TtsSettings | null) => void) {
+  return onValue(ref(db, "settings/tts"), (snap) => {
+    callback(snap.exists() ? (snap.val() as TtsSettings) : null);
+  });
+}
+
+export async function getTtsSettings(): Promise<TtsSettings | null> {
+  const snap = await get(ref(db, "settings/tts"));
+  return snap.exists() ? (snap.val() as TtsSettings) : null;
+}
+
+export async function saveTtsSettings(settings: TtsSettings) {
+  await set(ref(db, "settings/tts"), settings);
+}
+
+// ---- Control ----
+export async function skipCurrentAlert() {
+  await set(ref(db, "control/skip"), Date.now());
+}
+
+export function listenControlSkip(callback: (val: number) => void) {
+  return onValue(ref(db, "control/skip"), (snap) => {
+    callback(snap.val() || 0);
+  });
 }
 
 // Alias สำหรับ slip upload

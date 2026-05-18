@@ -11,10 +11,11 @@ import {
   listenPaymentSettings,
   createDonation,
   updateDonationStatus,
+  approveDonation,
   confirmDonation,
   uploadSlip,
 } from "@/lib/firestore";
-import { extractSlipData, isOcrConfident } from "@/lib/ocr";
+import { extractSlipData, validateSlipWithOCR } from "@/lib/ocr";
 import { formatCurrency } from "@/lib/utils";
 import type { PaymentSettings, PaymentMethod } from "@/types";
 
@@ -76,11 +77,11 @@ function FormStep({ name, setName, message, setMessage, amount, setAmount, onNex
   );
 }
 
-function PaymentStep({ settings, amount, method, setMethod, slip, setSlip, onBack, onDonate, donating }: {
+function PaymentStep({ settings, amount, method, setMethod, slip, setSlip, onBack, onDonate, donating, donatingMsg }: {
   settings: PaymentSettings; amount: number;
   method: PaymentMethod | null; setMethod: (m: PaymentMethod) => void;
   slip: File | null; setSlip: (f: File | null) => void;
-  onBack: () => void; onDonate: () => void; donating: boolean;
+  onBack: () => void; onDonate: () => void; donating: boolean; donatingMsg: string;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -179,7 +180,7 @@ function PaymentStep({ settings, amount, method, setMethod, slip, setSlip, onBac
         </button>
         <button onClick={onDonate} disabled={!method || !slip || donating}
           className="flex-1 flex items-center justify-center gap-2 bg-violet-600 hover:bg-violet-500 disabled:bg-white/[0.05] disabled:text-white/20 text-white rounded-xl py-3 text-sm font-medium transition-all">
-          {donating ? <><Loader2 className="w-4 h-4 animate-spin" /> กำลังตรวจสอบ...</> : <><Heart className="w-4 h-4" /> Donate!</>}
+          {donating ? <><Loader2 className="w-4 h-4 animate-spin" /> {donatingMsg}</> : <><Heart className="w-4 h-4" /> Donate!</>}
         </button>
       </div>
     </motion.div>
@@ -217,6 +218,7 @@ export default function DonatePage() {
   const [slip, setSlip] = useState<File | null>(null);
   const [step, setStep] = useState<Step>("form");
   const [donating, setDonating] = useState(false);
+  const [donatingMsg, setDonatingMsg] = useState("กำลังส่งข้อมูล...");
   const [result, setResult] = useState<ResultState>("success");
 
   useEffect(() => {
@@ -232,14 +234,35 @@ export default function DonatePage() {
     if (!slip || !method || !settings) return;
     setDonating(true);
     setStep("uploading");
+    
     try {
-      const slipUrl = await uploadSlip(slip, "tmp");
-      const donationId = await createDonation({ name: name.trim(), message: message.trim(), amount: Number(amount), paymentMethod: method, slipUrl });
+      setDonatingMsg("กำลังตรวจสอบรูปภาพ...");
       const ocrResult = await extractSlipData(slip, Number(amount), settings.bank?.accountName);
-      if (isOcrConfident(ocrResult)) {
-        await confirmDonation(donationId);
+      
+      // Step 1: ตรวจสอบว่าเป็นสลิปหรือไม่
+      if (!ocrResult.isSlip) {
+        console.warn("Uploaded image does not look like a slip");
+        // เรายังให้ไปต่อแบบ pending แต่บันทึกไว้ว่าไม่ใช่สลิปที่ระบบจำได้
+      }
+
+      setDonatingMsg("กำลังอัพโหลดสลิป...");
+      const slipUrl = await uploadSlip(slip, "tmp");
+      
+      setDonatingMsg("กำลังบันทึกข้อมูล...");
+      const donationId = await createDonation({ 
+        name: name.trim(), 
+        message: message.trim(), 
+        amount: Number(amount), 
+        paymentMethod: method, 
+        slipUrl 
+      });
+      
+      if (validateSlipWithOCR(ocrResult)) {
+        setDonatingMsg("ยืนยันรายการสำเร็จ!");
+        await approveDonation(donationId, true);
         setResult("success");
       } else {
+        setDonatingMsg("รอการตรวจสอบจาก Streamer...");
         await updateDonationStatus(donationId, "pending", ocrResult);
         setResult("pending");
       }
@@ -250,6 +273,7 @@ export default function DonatePage() {
       setStep("result");
     } finally {
       setDonating(false);
+      setDonatingMsg("กำลังส่งข้อมูล...");
     }
   };
 
@@ -291,7 +315,7 @@ export default function DonatePage() {
           ) : (
             <AnimatePresence mode="wait">
               {step === "form" && <FormStep name={name} setName={setName} message={message} setMessage={setMessage} amount={amount} setAmount={setAmount} onNext={() => setStep("payment")} />}
-              {(step === "payment" || step === "uploading") && <PaymentStep settings={settings} amount={Number(amount)} method={method} setMethod={setMethod} slip={slip} setSlip={setSlip} onBack={() => setStep("form")} onDonate={handleDonate} donating={donating} />}
+              {(step === "payment" || step === "uploading") && <PaymentStep settings={settings} amount={Number(amount)} method={method} setMethod={setMethod} slip={slip} setSlip={setSlip} onBack={() => setStep("form")} onDonate={handleDonate} donating={donating} donatingMsg={donatingMsg} />}
               {step === "result" && <ResultStep state={result} onReset={handleReset} />}
             </AnimatePresence>
           )}

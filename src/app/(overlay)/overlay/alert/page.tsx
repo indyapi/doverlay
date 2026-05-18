@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { listenOverlayQueue, markQueueItemPlayed } from "@/lib/firestore";
-import { speak } from "@/lib/tts";
+import { listenOverlayQueue, markQueueItemPlayed, listenControlSkip } from "@/lib/firestore";
+import { speak, stopSpeaking } from "@/lib/tts";
 import { formatCurrency } from "@/lib/utils";
 import type { OverlayQueueItem } from "@/types";
 
@@ -68,6 +68,17 @@ export default function OverlayAlertPage() {
   const [current, setCurrent] = useState<OverlayQueueItem | null>(null);
   const processingRef = useRef(false);
   const queueRef = useRef<OverlayQueueItem[]>([]);
+  const skipRef = useRef(0);
+
+  const playSound = useCallback(() => {
+    try {
+      const audio = new Audio("/alert.mp3");
+      audio.volume = 0.5;
+      audio.play();
+    } catch (e) {
+      console.error("Audio play failed", e);
+    }
+  }, []);
 
   const processNext = useCallback(async () => {
     if (processingRef.current) return;
@@ -78,21 +89,30 @@ export default function OverlayAlertPage() {
     setCurrent(next);
     await markQueueItemPlayed(next.id);
 
+    // Play Sound
+    playSound();
+
     if (next.message) {
       try {
-        await speak(`${next.name} โดเนท ${next.amount} บาท ${next.message}`);
+        // Step 004: TTS reading only the message
+        await speak(next.message);
       } catch {
-        await new Promise(r => setTimeout(r, 6000));
+        // Fallback delay if TTS fails or takes too long
+        await new Promise(r => setTimeout(r, 4000));
       }
     } else {
-      await new Promise(r => setTimeout(r, 600));
+      await new Promise(r => setTimeout(r, 2000));
     }
 
-    await new Promise(r => setTimeout(r, 600));
+    // Cooldown 1s
+    await new Promise(r => setTimeout(r, 1000));
+
     setCurrent(null);
     processingRef.current = false;
-    setTimeout(processNext, 400);
-  }, []);
+
+    // Small delay before next to avoid overlap
+    setTimeout(processNext, 500);
+  }, [playSound]);
 
   useEffect(() => {
     const unsub = listenOverlayQueue(items => {
@@ -103,6 +123,19 @@ export default function OverlayAlertPage() {
     });
     return unsub;
   }, [processNext]);
+
+  useEffect(() => {
+    const unsub = listenControlSkip((val) => {
+      if (skipRef.current !== 0 && val !== skipRef.current) {
+        if (processingRef.current) {
+          stopSpeaking();
+          setCurrent(null);
+        }
+      }
+      skipRef.current = val;
+    });
+    return unsub;
+  }, []);
 
   return (
     <div className="w-screen h-screen flex items-end justify-start p-6" style={{ background: "transparent" }}>

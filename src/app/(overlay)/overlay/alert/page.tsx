@@ -87,31 +87,35 @@ export default function OverlayAlertPage() {
 
     processingRef.current = true;
     setCurrent(next);
-    await markQueueItemPlayed(next.id);
+    
+    // Mark as played immediately so it doesn't show up again on refresh
+    markQueueItemPlayed(next.id);
 
-    // Play Sound
+    // Play Sound - non blocking
     playSound();
 
     if (next.message) {
       try {
         // Use the donor's selected voice if available
         const options = next.selectedVoice ? { voiceURI: next.selectedVoice.voiceURI } : {};
+        // Add a small delay before TTS to let the alert animation start
+        await new Promise(r => setTimeout(r, 800));
         await speak(next.message, options);
-      } catch {
-        // Fallback delay if TTS fails or takes too long
-        await new Promise(r => setTimeout(r, 4000));
+      } catch (e) {
+        console.error("TTS failed", e);
+        await new Promise(r => setTimeout(r, 3000));
       }
     } else {
-      await new Promise(r => setTimeout(r, 2000));
+      await new Promise(r => setTimeout(r, 4000));
     }
 
-    // Cooldown 1s
-    await new Promise(r => setTimeout(r, 1000));
+    // Cooldown
+    await new Promise(r => setTimeout(r, 500));
 
     setCurrent(null);
     processingRef.current = false;
 
-    // Small delay before next to avoid overlap
+    // Trigger next check
     setTimeout(processNext, 500);
   }, [playSound]);
 

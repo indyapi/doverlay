@@ -31,27 +31,30 @@ export async function getThaiVoices(): Promise<TtsVoice[]> {
     return [];
   }
 
-  return new Promise((resolve) => {
-    let voices = window.speechSynthesis.getVoices();
-    
-    const filterThai = (vList: SpeechSynthesisVoice[]) => 
-      vList
-        .filter(v => v.lang.startsWith("th"))
-        .map(v => ({ name: v.name, voiceURI: v.voiceURI, lang: v.lang }));
+  const getThai = () => {
+    const voices = window.speechSynthesis.getVoices();
+    return voices
+      .filter(v => v.lang.startsWith("th"))
+      .map(v => ({ name: v.name, voiceURI: v.voiceURI, lang: v.lang }));
+  };
 
-    if (voices.length > 0) {
-      resolve(filterThai(voices));
-    } else {
-      window.speechSynthesis.onvoiceschanged = () => {
-        voices = window.speechSynthesis.getVoices();
-        resolve(filterThai(voices));
-      };
-      
-      // Fallback สำหรับบาง Browser ที่อาจจะไม่ trigger onvoiceschanged
-      setTimeout(() => {
-        resolve(filterThai(window.speechSynthesis.getVoices()));
-      }, 1000);
-    }
+  const currentVoices = getThai();
+  if (currentVoices.length > 0) return currentVoices;
+
+  return new Promise((resolve) => {
+    const handler = () => {
+      const v = getThai();
+      if (v.length > 0) {
+        window.speechSynthesis.onvoiceschanged = null;
+        resolve(v);
+      }
+    };
+    window.speechSynthesis.onvoiceschanged = handler;
+    // Fallback
+    setTimeout(() => {
+      window.speechSynthesis.onvoiceschanged = null;
+      resolve(getThai());
+    }, 1500);
   });
 }
 
@@ -92,10 +95,28 @@ export function speak(text: string, options: SpeakOptions = {}): Promise<void> {
       if (thaiVoice) utterance.voice = thaiVoice;
     }
 
-    utterance.onend = () => resolve();
-    utterance.onerror = (e) => reject(e);
+    // Ensure utterance properties are set before speaking
+    utterance.onend = () => {
+      resolve();
+    };
+    utterance.onerror = (e) => {
+      console.error("TTS Error:", e);
+      reject(e);
+    };
+
+    // Chrome workaround: sometimes TTS gets stuck
+    const resumeInfinity = () => {
+      if (window.speechSynthesis.speaking) {
+        window.speechSynthesis.pause();
+        window.speechSynthesis.resume();
+      }
+      if (window.speechSynthesis.speaking) {
+        setTimeout(resumeInfinity, 10000);
+      }
+    };
 
     window.speechSynthesis.speak(utterance);
+    // resumeInfinity(); // Only needed for very long texts, but good to know
   });
 }
 

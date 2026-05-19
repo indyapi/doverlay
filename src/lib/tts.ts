@@ -14,6 +14,16 @@ export interface SpeakOptions {
 }
 
 /**
+ * ดึงรายการเสียงทั้งหมดที่มีในเครื่อง
+ */
+export function getVoices(): SpeechSynthesisVoice[] {
+  if (typeof window === "undefined" || !window.speechSynthesis) {
+    return [];
+  }
+  return window.speechSynthesis.getVoices();
+}
+
+/**
  * ดึงรายการเสียงภาษาไทยที่มีในเครื่อง
  */
 export async function getThaiVoices(): Promise<TtsVoice[]> {

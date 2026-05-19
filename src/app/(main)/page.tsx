@@ -299,7 +299,8 @@ export default function DonatePage() {
         message: message.trim(), 
         amount: Number(amount), 
         paymentMethod: method, 
-        slipUrl 
+        slipUrl,
+        selectedVoice 
       });
       
       if (validateSlipWithOCR(ocrResult)) {
@@ -359,7 +360,19 @@ export default function DonatePage() {
             </div>
           ) : (
             <AnimatePresence mode="wait">
-              {step === "form" && <FormStep name={name} setName={setName} message={message} setMessage={setMessage} amount={amount} setAmount={setAmount} onNext={() => setStep("payment")} />}
+              {step === "form" && (
+                <FormStep 
+                  name={name} 
+                  setName={setName} 
+                  message={message} 
+                  setMessage={setMessage} 
+                  amount={amount} 
+                  setAmount={setAmount} 
+                  selectedVoice={selectedVoice}
+                  setSelectedVoice={setSelectedVoice}
+                  onNext={() => setStep("payment")} 
+                />
+              )}
               {(step === "payment" || step === "uploading") && <PaymentStep settings={settings} amount={Number(amount)} method={method} setMethod={setMethod} slip={slip} setSlip={setSlip} onBack={() => setStep("form")} onDonate={handleDonate} donating={donating} donatingMsg={donatingMsg} />}
               {step === "result" && <ResultStep state={result} onReset={handleReset} />}
             </AnimatePresence>

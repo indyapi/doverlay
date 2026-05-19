@@ -55,8 +55,11 @@ function FormStep({ name, setName, message, setMessage, amount, setAmount, selec
 
   const handleTestVoice = (e: React.MouseEvent, voice: TtsVoice) => {
     e.stopPropagation();
-    const textToSpeak = message.trim() || "สวัสดีครับ นี่คือตัวอย่างเสียงอ่านข้อความ";
-    speak(textToSpeak, { voiceURI: voice.voiceURI });
+    if (!message.trim()) {
+      speak("กรุณาพิมพ์ข้อความที่ต้องการทดสอบก่อนครับ", { voiceURI: voice.voiceURI });
+      return;
+    }
+    speak(message.trim(), { voiceURI: voice.voiceURI });
   };
 
   return (

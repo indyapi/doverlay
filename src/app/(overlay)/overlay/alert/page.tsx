@@ -66,6 +66,7 @@ function AlertCard({ item }: { item: OverlayQueueItem }) {
 
 export default function OverlayAlertPage() {
   const [current, setCurrent] = useState<OverlayQueueItem | null>(null);
+  const [active, setActive] = useState(false);
   const processingRef = useRef(false);
   const queueRef = useRef<OverlayQueueItem[]>([]);
   const skipRef = useRef(0);
@@ -99,7 +100,7 @@ export default function OverlayAlertPage() {
         // Use the donor's selected voice if available
         const options = next.selectedVoice ? { voiceURI: next.selectedVoice.voiceURI } : {};
         // Add a small delay before TTS to let the alert animation start
-        await new Promise(r => setTimeout(r, 800));
+        await new Promise(r => setTimeout(r, 1000));
         await speak(next.message, options);
       } catch (e) {
         console.error("TTS failed", e);
@@ -118,6 +119,19 @@ export default function OverlayAlertPage() {
     // Trigger next check
     setTimeout(processNext, 500);
   }, [playSound]);
+
+  useEffect(() => {
+    // Hidden interaction to "unlock" TTS on some browsers
+    const unlock = () => {
+      if (!active) {
+        speak("", { volume: 0 });
+        setActive(true);
+        console.log("TTS Unlocked");
+      }
+    };
+    window.addEventListener("click", unlock);
+    return () => window.removeEventListener("click", unlock);
+  }, [active]);
 
   useEffect(() => {
     const unsub = listenOverlayQueue(items => {

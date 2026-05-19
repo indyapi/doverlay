@@ -81,42 +81,44 @@ export function speak(text: string, options: SpeakOptions = {}): Promise<void> {
     utterance.volume = options.volume ?? 1.0;
 
     // เลือก Voice
-    const voices = window.speechSynthesis.getVoices();
-    if (options.voiceURI) {
-      const selectedVoice = voices.find(v => v.voiceURI === options.voiceURI);
-      if (selectedVoice) {
-        utterance.voice = selectedVoice;
+    const loadAndSpeak = () => {
+      const voices = window.speechSynthesis.getVoices();
+      if (options.voiceURI) {
+        const selectedVoice = voices.find(v => v.voiceURI === options.voiceURI);
+        if (selectedVoice) {
+          utterance.voice = selectedVoice;
+        }
       }
+
+      // ถ้าไม่มี Voice ที่เลือก หรือหาไม่เจอ ให้หาภาษาไทยตัวอื่นเป็น fallback
+      if (!utterance.voice) {
+        const thaiVoice = voices.find(v => v.lang.startsWith("th"));
+        if (thaiVoice) utterance.voice = thaiVoice;
+      }
+
+      utterance.onend = () => resolve();
+      utterance.onerror = (e) => reject(e);
+
+      window.speechSynthesis.speak(utterance);
+    };
+
+    const currentVoices = window.speechSynthesis.getVoices();
+    if (currentVoices.length > 0) {
+      loadAndSpeak();
+    } else {
+      // Wait for voices to load
+      window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.onvoiceschanged = null;
+        loadAndSpeak();
+      };
+      // Fallback timeout
+      setTimeout(() => {
+        if (window.speechSynthesis.onvoiceschanged) {
+          window.speechSynthesis.onvoiceschanged = null;
+          loadAndSpeak();
+        }
+      }, 1000);
     }
-
-    // ถ้าไม่มี Voice ที่เลือก หรือหาไม่เจอ ให้หาภาษาไทยตัวอื่นเป็น fallback
-    if (!utterance.voice) {
-      const thaiVoice = voices.find(v => v.lang.startsWith("th"));
-      if (thaiVoice) utterance.voice = thaiVoice;
-    }
-
-    // Ensure utterance properties are set before speaking
-    utterance.onend = () => {
-      resolve();
-    };
-    utterance.onerror = (e) => {
-      console.error("TTS Error:", e);
-      reject(e);
-    };
-
-    // Chrome workaround: sometimes TTS gets stuck
-    const resumeInfinity = () => {
-      if (window.speechSynthesis.speaking) {
-        window.speechSynthesis.pause();
-        window.speechSynthesis.resume();
-      }
-      if (window.speechSynthesis.speaking) {
-        setTimeout(resumeInfinity, 10000);
-      }
-    };
-
-    window.speechSynthesis.speak(utterance);
-    // resumeInfinity(); // Only needed for very long texts, but good to know
   });
 }
 

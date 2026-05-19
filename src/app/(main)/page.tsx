@@ -55,38 +55,39 @@ function FormStep({ name, setName, message, setMessage, amount, setAmount, selec
 
   const handleTestVoice = (e: React.MouseEvent, voice: TtsVoice) => {
     e.stopPropagation();
-    speak("สวัสดีครับ ทดสอบเสียงพูด", { voiceURI: voice.voiceURI });
+    const textToSpeak = message.trim() || "สวัสดีครับ นี่คือตัวอย่างเสียงอ่านข้อความ";
+    speak(textToSpeak, { voiceURI: voice.voiceURI });
   };
 
   return (
     <motion.div key="form" initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24 }} transition={{ duration: 0.3 }} className="space-y-4">
       <div>
-        <label className="text-xs text-white/40 uppercase tracking-widest mb-1.5 block">ชื่อของคุณ *</label>
+        <label className="text-[10px] text-white/40 uppercase tracking-widest mb-1.5 block font-medium">ชื่อของคุณ *</label>
         <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="ใส่ชื่อที่ต้องการแสดง" maxLength={32}
-          className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-violet-500/50 transition-all" />
+          className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-violet-500/50 transition-all shadow-inner" />
       </div>
       <div>
-        <label className="text-xs text-white/40 uppercase tracking-widest mb-1.5 block">ข้อความฝาก</label>
+        <label className="text-[10px] text-white/40 uppercase tracking-widest mb-1.5 block font-medium">ข้อความฝาก</label>
         <input type="text" value={message} onChange={e => setMessage(e.target.value)} placeholder="ฝากอะไรไว้ได้เลย..." maxLength={100}
-          className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-violet-500/50 transition-all" />
+          className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-violet-500/50 transition-all shadow-inner" />
       </div>
 
       {voices.length > 0 && (
-        <div>
-          <label className="text-xs text-white/40 uppercase tracking-widest mb-1.5 block">เลือกเสียงอ่านข้อความ</label>
-          <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+        <div className="space-y-2">
+          <label className="text-[10px] text-white/40 uppercase tracking-widest block font-medium">เลือกเสียงอ่านข้อความ</label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar p-0.5">
             {voices.map(v => (
               <button
                 key={v.voiceURI}
                 type="button"
                 onClick={() => setSelectedVoice(v)}
-                className={`flex items-center justify-between px-4 py-2.5 rounded-xl border transition-all ${selectedVoice?.voiceURI === v.voiceURI ? "bg-violet-600/20 border-violet-500/40 text-violet-300" : "bg-white/[0.03] border-white/[0.08] text-white/40 hover:border-white/[0.18]"}`}
+                className={`flex items-center justify-between px-3 py-2.5 rounded-xl border transition-all group ${selectedVoice?.voiceURI === v.voiceURI ? "bg-violet-600/25 border-violet-500/50 text-violet-200 shadow-[0_0_15px_rgba(139,92,246,0.1)]" : "bg-white/[0.03] border-white/[0.08] text-white/40 hover:border-white/[0.18] hover:bg-white/[0.05]"}`}
               >
-                <span className="text-xs font-medium truncate flex-1 text-left">{v.name}</span>
+                <span className="text-[11px] font-medium truncate flex-1 text-left">{v.name.replace("Google ", "").replace("Thai", "ไทย")}</span>
                 <button
                   type="button"
                   onClick={(e) => handleTestVoice(e, v)}
-                  className="ml-2 p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-all"
+                  className={`ml-2 p-1.5 rounded-lg transition-all ${selectedVoice?.voiceURI === v.voiceURI ? "bg-violet-500/20 text-violet-300 hover:bg-violet-500/30" : "bg-white/5 hover:bg-white/10 text-white/40 hover:text-white"}`}
                 >
                   <Volume2 className="w-3.5 h-3.5" />
                 </button>
@@ -332,21 +333,21 @@ export default function DonatePage() {
         <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-cyan-500/[0.04] rounded-full blur-[80px]" />
         <div className="absolute bottom-0 left-0 w-[250px] h-[250px] bg-pink-500/[0.04] rounded-full blur-[80px]" />
       </div>
-      <div className="relative z-10 w-full max-w-sm">
+      <div className="relative z-10 w-full max-w-sm sm:max-w-md md:max-w-lg transition-all duration-500">
         <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-6">
-          <h1 className="text-3xl font-display font-bold tracking-tight text-white">D<span className="text-violet-400">overlay</span></h1>
+          <h1 className="text-3xl sm:text-4xl font-display font-bold tracking-tight text-white">D<span className="text-violet-400">overlay</span></h1>
           <p className="text-sm text-white/30 mt-1">Support your favorite streamer</p>
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-          className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-5 backdrop-blur-sm">
+          className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-5 sm:p-7 backdrop-blur-sm shadow-2xl">
           {step !== "result" && (
-            <div className="flex items-center gap-2 mb-5">
+            <div className="flex items-center gap-2 mb-6">
               {["form", "payment"].map((s, i) => (
                 <div key={s} className="flex items-center gap-2 flex-1">
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-all ${step === s ? "bg-violet-600 text-white" : (step === "payment" || step === "uploading") && i === 0 ? "bg-green-500/30 text-green-400" : "bg-white/[0.06] text-white/20"}`}>
-                    {(step === "payment" || step === "uploading") && i === 0 ? <Check className="w-3 h-3" /> : i + 1}
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold transition-all ${step === s ? "bg-violet-600 text-white shadow-[0_0_15px_rgba(139,92,246,0.3)]" : (step === "payment" || step === "uploading") && i === 0 ? "bg-green-500/30 text-green-400" : "bg-white/[0.06] text-white/20"}`}>
+                    {(step === "payment" || step === "uploading") && i === 0 ? <Check className="w-3.5 h-3.5" /> : i + 1}
                   </div>
-                  <span className={`text-xs ${step === s ? "text-white/60" : "text-white/20"}`}>{i === 0 ? "ข้อมูล" : "ชำระเงิน"}</span>
+                  <span className={`text-[11px] font-medium tracking-wide uppercase ${step === s ? "text-white/80" : "text-white/30"}`}>{i === 0 ? "ข้อมูล" : "ชำระเงิน"}</span>
                   {i === 0 && <div className="flex-1 h-px bg-white/[0.06]" />}
                 </div>
               ))}

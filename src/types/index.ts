@@ -1,4 +1,5 @@
 import { serverTimestamp  } from "firebase/database";
+import type { TtsVoice } from "@/lib/tts";
 
 // ---- Donation ----
 export type PaymentMethod = "promptpay" | "bank";
@@ -29,6 +30,7 @@ export interface Donation {
   reviewedBy: string | null;
   reviewedAt: number | null;
   createdAt: number; // Unix timestamp ms
+  selectedVoice?: TtsVoice | null;
 }
 
 // ---- Overlay Queue ----
@@ -40,6 +42,7 @@ export interface OverlayQueueItem {
   amount: number;
   played: boolean;
   createdAt: number;
+  selectedVoice?: TtsVoice | null;
 }
 
 // ---- Settings ----

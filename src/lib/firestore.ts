@@ -79,6 +79,7 @@ export async function approveDonation(id: string, isAuto: boolean = false) {
       amount: d.amount,
       played: false,
       createdAt: Date.now(),
+      selectedVoice: d.selectedVoice || null,
     });
   }
 }

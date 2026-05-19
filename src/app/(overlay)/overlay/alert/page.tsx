@@ -94,8 +94,9 @@ export default function OverlayAlertPage() {
 
     if (next.message) {
       try {
-        // Step 004: TTS reading only the message
-        await speak(next.message);
+        // Use the donor's selected voice if available
+        const options = next.selectedVoice ? { voiceURI: next.selectedVoice.voiceURI } : {};
+        await speak(next.message, options);
       } catch {
         // Fallback delay if TTS fails or takes too long
         await new Promise(r => setTimeout(r, 4000));

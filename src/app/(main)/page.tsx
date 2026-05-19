@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Upload, QrCode, CreditCard, Copy, Check,
-  Loader2, Heart, AlertCircle, CheckCircle2, X
+  Loader2, Heart, AlertCircle, CheckCircle2, X, Volume2
 } from "lucide-react";
 import Image from "next/image";
 import {
@@ -17,6 +17,7 @@ import {
 } from "@/lib/firestore";
 import { extractSlipData, validateSlipWithOCR } from "@/lib/ocr";
 import { formatCurrency } from "@/lib/utils";
+import { getThaiVoices, speak, type TtsVoice } from "@/lib/tts";
 import type { PaymentSettings, PaymentMethod } from "@/types";
 
 type Step = "form" | "payment" | "uploading" | "result";
@@ -34,12 +35,29 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-function FormStep({ name, setName, message, setMessage, amount, setAmount, onNext }: {
+function FormStep({ name, setName, message, setMessage, amount, setAmount, selectedVoice, setSelectedVoice, onNext }: {
   name: string; setName: (v: string) => void;
   message: string; setMessage: (v: string) => void;
   amount: string; setAmount: (v: string) => void;
+  selectedVoice: TtsVoice | null; setSelectedVoice: (v: TtsVoice) => void;
   onNext: () => void;
 }) {
+  const [voices, setVoices] = useState<TtsVoice[]>([]);
+  
+  useEffect(() => {
+    getThaiVoices().then(vList => {
+      setVoices(vList);
+      if (vList.length > 0 && !selectedVoice) {
+        setSelectedVoice(vList[0]);
+      }
+    });
+  }, []);
+
+  const handleTestVoice = (e: React.MouseEvent, voice: TtsVoice) => {
+    e.stopPropagation();
+    speak("สวัสดีครับ ทดสอบเสียงพูด", { voiceURI: voice.voiceURI });
+  };
+
   return (
     <motion.div key="form" initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24 }} transition={{ duration: 0.3 }} className="space-y-4">
       <div>
@@ -52,6 +70,32 @@ function FormStep({ name, setName, message, setMessage, amount, setAmount, onNex
         <input type="text" value={message} onChange={e => setMessage(e.target.value)} placeholder="ฝากอะไรไว้ได้เลย..." maxLength={100}
           className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-violet-500/50 transition-all" />
       </div>
+
+      {voices.length > 0 && (
+        <div>
+          <label className="text-xs text-white/40 uppercase tracking-widest mb-1.5 block">เลือกเสียงอ่านข้อความ</label>
+          <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+            {voices.map(v => (
+              <button
+                key={v.voiceURI}
+                type="button"
+                onClick={() => setSelectedVoice(v)}
+                className={`flex items-center justify-between px-4 py-2.5 rounded-xl border transition-all ${selectedVoice?.voiceURI === v.voiceURI ? "bg-violet-600/20 border-violet-500/40 text-violet-300" : "bg-white/[0.03] border-white/[0.08] text-white/40 hover:border-white/[0.18]"}`}
+              >
+                <span className="text-xs font-medium truncate flex-1 text-left">{v.name}</span>
+                <button
+                  type="button"
+                  onClick={(e) => handleTestVoice(e, v)}
+                  className="ml-2 p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-all"
+                >
+                  <Volume2 className="w-3.5 h-3.5" />
+                </button>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div>
         <label className="text-xs text-white/40 uppercase tracking-widest mb-1.5 block">จำนวนเงิน (บาท) *</label>
         <div className="relative">
@@ -214,6 +258,7 @@ export default function DonatePage() {
   const [name, setName] = useState("");
   const [message, setMessage] = useState("");
   const [amount, setAmount] = useState("");
+  const [selectedVoice, setSelectedVoice] = useState<TtsVoice | null>(null);
   const [method, setMethod] = useState<PaymentMethod | null>(null);
   const [slip, setSlip] = useState<File | null>(null);
   const [step, setStep] = useState<Step>("form");
